@@ -1,0 +1,5 @@
+{
+  "name": "Nebula UI",
+  "description": "一个基于 Tailwind CSS 构建的现代化、可访问的企业级 React 组件库。内置 AI 文档助手。",
+  "requestFramePermissions": []
+}
