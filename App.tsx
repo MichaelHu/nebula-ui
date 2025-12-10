@@ -101,12 +101,12 @@ function InnerApp() {
   // Demo States
   const [modalOpen, setModalOpen] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [btnLoading, setBtnLoading] = useState(false);
   const [switchChecked, setSwitchChecked] = useState(false);
-  const [radioValue, setRadioValue] = useState('option1');
   const [currentPage, setCurrentPage] = useState(1);
   const [sliderValue, setSliderValue] = useState(50);
   const [tabValue, setTabValue] = useState('account');
+  const [date, setDate] = useState<Date | undefined>(new Date());
+  const [alertVisible, setAlertVisible] = useState(true);
 
   // Categorize components for sidebar
   const categories = {
@@ -393,6 +393,7 @@ export default function PaginationDemo() {
                     api: [
                         { prop: 'currentPage', type: "number", default: "required", description: '当前页' },
                         { prop: 'totalPages', type: "number", default: "required", description: '总页数' },
+                        { prop: 'onPageChange', type: "(page: number) => void", default: "required", description: '页码改变回调' },
                     ]
                 }}
                 preview={
@@ -977,15 +978,41 @@ export default function ProgressDemo() {
                 doc={{
                     id: 'calendar',
                     title: 'Calendar 日历',
-                    description: '日历视图。',
-                    usage: `import { Calendar } from '@/components/ui/Calendar';
+                    description: '日历组件，支持日期选择和月份切换。',
+                    usage: `import { useState } from 'react';
+import { Calendar } from '@/components/ui/Calendar';
 
 export default function CalendarDemo() {
-  return <Calendar />;
+  const [date, setDate] = useState(new Date());
+
+  return (
+    <div className="flex flex-col items-center space-y-4">
+      <Calendar 
+        value={date} 
+        onChange={setDate} 
+      />
+      <p className="text-sm text-slate-500">
+        Selected: {date?.toLocaleDateString()}
+      </p>
+    </div>
+  );
 }`,
-                    api: []
+                    api: [
+                        { prop: 'value', type: "Date", default: "undefined", description: '当前选中的日期' },
+                        { prop: 'onChange', type: "(date: Date) => void", default: "undefined", description: '日期变化回调' },
+                    ]
                 }}
-                preview={<Calendar />}
+                preview={
+                    <div className="flex flex-col items-center space-y-4">
+                        <Calendar 
+                            value={date} 
+                            onChange={setDate} 
+                        />
+                        <p className="text-sm text-slate-500">
+                            Selected: {date?.toLocaleDateString()}
+                        </p>
+                    </div>
+                }
             />
         );
 
@@ -997,18 +1024,42 @@ export default function CalendarDemo() {
                     id: 'alert', 
                     title: 'Alert 警告提示', 
                     description: '警告提示。', 
-                    usage: `import { Alert } from '@/components/ui/Alert';
+                    usage: `import { useState } from 'react';
+import { Alert } from '@/components/ui/Alert';
+import { Button } from '@/components/ui/Button';
 
 export default function AlertDemo() {
+  const [visible, setVisible] = useState(true);
+
+  if (!visible) {
+    return <Button onClick={() => setVisible(true)}>Show Alert</Button>;
+  }
+
   return (
-    <Alert title="Heads up!">
+    <Alert 
+      title="Heads up!" 
+      onClose={() => setVisible(false)}
+    >
       You can add components to your app using the cli.
     </Alert>
   );
 }`, 
-                    api: [] 
+                    api: [
+                        { prop: 'variant', type: "'default'|'destructive'|'success'|'warning'", default: "'default'", description: '样式变体' },
+                        { prop: 'title', type: "string", default: "", description: '标题' },
+                        { prop: 'icon', type: "boolean", default: "true", description: '是否显示图标' },
+                        { prop: 'onClose', type: "() => void", default: "undefined", description: '关闭回调' },
+                    ] 
                 }}
-                preview={<Alert title="Heads up!">You can add components to your app using the cli.</Alert>}
+                preview={
+                    alertVisible ? (
+                        <Alert title="Heads up!" onClose={() => setAlertVisible(false)}>
+                            You can add components to your app using the cli.
+                        </Alert>
+                    ) : (
+                        <Button onClick={() => setAlertVisible(true)}>Reset Alert</Button>
+                    )
+                }
             />
         );
     case 'modal':
