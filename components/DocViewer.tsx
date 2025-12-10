@@ -1,10 +1,13 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { ComponentDoc } from '../types';
-import { highlightCode } from '../lib/utils';
 import { Bot, Send, Sparkles, Copy, Check } from 'lucide-react';
 import { askAiAssistant } from '../services/geminiService';
 import { Button } from './ui/Button';
 import { Input } from './ui/Input';
+import Editor from 'react-simple-code-editor';
+
+// Access global Prism instance loaded via script tags
+declare const Prism: any;
 
 interface DocViewerProps {
   doc: ComponentDoc;
@@ -15,6 +18,14 @@ export const DocViewer: React.FC<DocViewerProps> = ({ doc, preview }) => {
   const [activeTab, setActiveTab] = useState<'preview' | 'code'>('preview');
   const [copied, setCopied] = useState(false);
   
+  // Editor State
+  const [code, setCode] = useState(doc.usage);
+
+  // Reset code when doc changes
+  useEffect(() => {
+    setCode(doc.usage);
+  }, [doc.id, doc.usage]);
+
   // AI Chat State
   const [chatOpen, setChatOpen] = useState(false);
   const [query, setQuery] = useState('');
@@ -23,7 +34,7 @@ export const DocViewer: React.FC<DocViewerProps> = ({ doc, preview }) => {
   const chatEndRef = useRef<HTMLDivElement>(null);
 
   const handleCopy = () => {
-    navigator.clipboard.writeText(doc.usage);
+    navigator.clipboard.writeText(code);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -39,7 +50,7 @@ export const DocViewer: React.FC<DocViewerProps> = ({ doc, preview }) => {
 
     const answer = await askAiAssistant(
       userMsg, 
-      `组件: ${doc.title}\n描述: ${doc.description}\nAPI 属性: ${JSON.stringify(doc.api)}\n示例用法:\n${doc.usage}`,
+      `组件: ${doc.title}\n描述: ${doc.description}\nAPI 属性: ${JSON.stringify(doc.api)}\n当前代码:\n${code}`,
       history.map(h => `${h.role}: ${h.text}`)
     );
 
@@ -52,6 +63,23 @@ export const DocViewer: React.FC<DocViewerProps> = ({ doc, preview }) => {
       chatEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
   }, [history, chatOpen]);
+
+  const highlightWithPrism = (code: string) => {
+    if (typeof Prism !== 'undefined' && Prism.languages.tsx) {
+        try {
+            return Prism.highlight(code, Prism.languages.tsx, 'tsx');
+        } catch (e) {
+            console.error("Prism highlight failed", e);
+        }
+    }
+    // Fallback: Escape HTML entities so they show up as text rather than being rendered as DOM nodes
+    return code
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+  };
 
   return (
     <div className="max-w-4xl mx-auto space-y-8 pb-20">
@@ -106,16 +134,32 @@ export const DocViewer: React.FC<DocViewerProps> = ({ doc, preview }) => {
               {preview}
             </div>
           ) : (
-            <div className="relative bg-slate-950 p-4 overflow-auto max-h-[400px]">
+            <div className="relative group bg-[#2d2d2d] min-h-[300px] text-white">
+                {/* Editor Container */}
+                <div className="max-h-[500px] overflow-auto font-mono text-sm leading-relaxed custom-scrollbar">
+                     <Editor
+                        value={code}
+                        onValueChange={code => setCode(code)}
+                        highlight={highlightWithPrism}
+                        padding={24}
+                        style={{
+                            fontFamily: '"Fira Code", "Fira Mono", monospace',
+                            fontSize: 14,
+                            backgroundColor: 'transparent',
+                            minHeight: '300px',
+                        }}
+                        textareaClassName="focus:outline-none"
+                    />
+                </div>
+
+                {/* Copy Button */}
                 <button 
                     onClick={handleCopy}
-                    className="absolute right-4 top-4 p-2 rounded-md bg-slate-800 text-slate-400 hover:text-white transition-colors"
+                    className="absolute right-4 top-4 p-2 rounded-md bg-white/10 text-slate-300 hover:text-white hover:bg-white/20 transition-all opacity-0 group-hover:opacity-100 z-10"
+                    title="Copy code"
                 >
-                    {copied ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
+                    {copied ? <Check className="w-4 h-4 text-green-400" /> : <Copy className="w-4 h-4" />}
                 </button>
-              <pre className="text-sm font-mono text-slate-300">
-                <code dangerouslySetInnerHTML={{ __html: highlightCode(doc.usage) }} />
-              </pre>
             </div>
           )}
         </div>
